@@ -1,0 +1,11 @@
+﻿#dlackovi2
+#Tue Mar 18 20:11:57 CET 2018
+korisnik=Pero
+grad=Varaždin
+port=8000
+maks.broj.zahtjeva.cekanje=5
+maks.broj.radnih.dretvi=5
+datoteka.evidencije.rada=NWTiS_dlackovi2_evidencija_rada.bin
+interval.za.serijalizaciju=60
+skup.kodova.znakova=UTF-8
+admin.0.dlackovi2=nwtis2018
