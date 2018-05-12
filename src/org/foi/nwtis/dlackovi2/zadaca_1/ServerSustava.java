@@ -1,6 +1,8 @@
 package org.foi.nwtis.dlackovi2.zadaca_1;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
@@ -17,6 +19,7 @@ import org.foi.nwtis.dlackovi2.konfiguracije.NemaKonfiguracije;
 
 public class ServerSustava
 {
+
     public static void main(String[] args)
     {
         String sintaksa = "([^\\s]+(\\.(?i)(txt|xml|bin|json))$)";
@@ -45,35 +48,45 @@ public class ServerSustava
             System.out.println("Konfiguracija ne postoji!");
         }
     }
-    
-    private void pokreniPosluzitelj(Konfiguracija konfig)
+
+    private void pokreniPosluzitelj(Konfiguracija konfiguracija)
     {
-        int port = Integer.parseInt(konfig.dajPostavku("port"));
-        int maksCekanje = Integer.parseInt(konfig.dajPostavku("maks.broj.zahtjeva.cekanje"));
-        int maksRadnihDretvi = Integer.parseInt(konfig.dajPostavku("maks.broj.radnih.dretvi"));
-        String datotekaEvidencije = konfig.dajPostavku("datoteka.evidencije.rada");
+        int port = Integer.parseInt(konfiguracija.dajPostavku("port"));
+        int maksBrojZahtjevaCekanje = Integer.parseInt(konfiguracija.dajPostavku("maks.broj.zahtjeva.cekanje"));
+        int maksBrojRadnihretvi = Integer.parseInt(konfiguracija.dajPostavku("maks.broj.radnih.dretvi"));
+        int intervalZaSerijalizaciju = Integer.parseInt(konfiguracija.dajPostavku("interval.za.serijalizaciju"));
+        String datotekaEvidencijeRada = konfiguracija.dajPostavku("datoteka.evidencije.rada");
+        String skupKodovaZnakova = konfiguracija.dajPostavku("skup.kodova.znakova");
         boolean krajRada = false;
         int brojRadnihDretvi = 0;
 
-        // TODO Provjeri i ako postoji učitaj evidenciju rada
-        SerijalizatorEvidencije se = new SerijalizatorEvidencije("dlackovi2 - Serijalizator", konfig);
-        se.start();
+        boolean evidencijaPostoji = datotekaPostoji(datotekaEvidencijeRada);
+        SerijalizatorEvidencije serijalizator = new SerijalizatorEvidencije("dlackovi2 - Serijalizator", konfiguracija);
+        serijalizator.start();
 
         try
         {
-            ServerSocket serverSocket = new ServerSocket(port, maksCekanje);
+            ServerSocket serverSocket = new ServerSocket(port, maksBrojZahtjevaCekanje);
 
             while (!krajRada)
             {
                 Socket socket = serverSocket.accept();
                 System.out.println("Korisnik se spojio");
-                if (brojRadnihDretvi == maksRadnihDretvi)
+                if (brojRadnihDretvi == maksBrojRadnihretvi)
                 {
-                    // TODO Vrati odgovarajući odgovor                    
+                    // TODO Vrati odgovarajući odgovor
                 }
                 else
                 {
-                    RadnaDretva radnaDretva = new RadnaDretva(socket, "dlackovi2 - " + brojRadnihDretvi, konfig);
+                    RadnaDretva radnaDretva = new RadnaDretva(socket, "dlackovi2 - " + brojRadnihDretvi, konfiguracija);
+                    if (evidencijaPostoji)
+                    {
+                        radnaDretva.setEvidencija(ucitajEvidenciju(datotekaEvidencijeRada));
+                    }
+                    else
+                    {
+                        System.out.println("Evidencija rada ne postoji. Nastavljam rad.");
+                    }
                     brojRadnihDretvi++;
                     radnaDretva.start();
                 }
@@ -84,7 +97,7 @@ public class ServerSustava
             Logger.getLogger(ServerSustava.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
+
     private static void provjeriArgumente(String[] args)
     {
         if (args.length != 1)
@@ -93,19 +106,19 @@ public class ServerSustava
             return;
         }
     }
-    
+
     private static void provjeriSintaksu(String sintaksa, String datotekaKonfiguracije)
     {
         Pattern pattern = Pattern.compile(sintaksa);
         Matcher matcher = pattern.matcher(datotekaKonfiguracije);
-        
-        if(matcher.matches())
+
+        if (matcher.matches())
         {
             System.out.println("Naziv konfiguracijske datoteke OK!");
         }
         else
         {
-            System.out.println("Naziv konfiguracijske datoteke OK!");
+            System.out.println("Naziv konfiguracijske datoteke POGRESAN!");
         }
     }
 
@@ -113,5 +126,24 @@ public class ServerSustava
     {
         Path path = Paths.get(filePath);
         return (Files.exists(path) && !Files.isDirectory(path));
+    }
+
+    private static Evidencija ucitajEvidenciju(String datotekaEvidencijeRada)
+    {
+        Evidencija evidencija = null;
+        try
+        {
+            FileInputStream fileInput = new FileInputStream(datotekaEvidencijeRada);
+            try (ObjectInputStream objectInput = new ObjectInputStream(fileInput))
+            {
+                evidencija = (Evidencija) objectInput.readObject();
+            }
+        }
+        catch (IOException | ClassNotFoundException i)
+        {
+            System.out.println("Problem kod učitavanja datoteke evidencije");
+        }
+
+        return evidencija;
     }
 }

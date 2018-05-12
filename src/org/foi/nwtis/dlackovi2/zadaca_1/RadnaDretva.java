@@ -10,28 +10,44 @@ import org.foi.nwtis.dlackovi2.konfiguracije.Konfiguracija;
 
 public class RadnaDretva extends Thread
 {
-    Socket socket;
-    String nazivDretve;
-    Konfiguracija konfig;
 
-    public RadnaDretva(Socket socket, String nazivDretve, Konfiguracija konfig)
+    private Socket socket;
+    private String nazivDretve;
+    private Konfiguracija konfiguracija;
+    private Evidencija evidencija;
+    private long vrijemePocetka = 0;
+
+    public RadnaDretva(Socket socket, String nazivDretve, Konfiguracija konfiguracija)
     {
         super(nazivDretve);
+        this.evidencija = new Evidencija();
         this.socket = socket;
         this.nazivDretve = nazivDretve;
-        this.konfig = konfig;
+        this.konfiguracija = konfiguracija;
     }
 
     @Override
     public void interrupt()
     {
-        super.interrupt();
+        try
+        {
+            evidencija.setBrojPrekinutihZahtjeva();
+            evidencija.setUkupnoVrijemeRadaRadnihDretvi(System.currentTimeMillis() - vrijemePocetka);
+
+            this.socket.close();
+            super.interrupt();
+        }
+        catch (IOException ex)
+        {
+            System.out.println("ERROR; Problem kod zatvaranja socketa");
+        }
     }
 
     @Override
     public void run()
     {
-        try (InputStream inputStream = socket.getInputStream();OutputStream outputStream = socket.getOutputStream();)
+        vrijemePocetka = System.currentTimeMillis();
+        try (InputStream inputStream = socket.getInputStream(); OutputStream outputStream = socket.getOutputStream();)
         {
             int znak;
             StringBuffer buffer = new StringBuffer();
@@ -46,17 +62,27 @@ public class RadnaDretva extends Thread
             }
             System.out.println("Dretva: " + nazivDretve + " Komanda: " + buffer.toString());
 
-        } 
+        }
         catch (IOException ex)
         {
             Logger.getLogger(RadnaDretva.class.getName()).log(Level.SEVERE, null, ex);
         }
-        // TODO Smanji broj aktivnih radnih dretvi kod ServerSustava        
+        // TODO Smanji broj aktivnih radnih dretvi kod ServerSustava
     }
 
     @Override
     public synchronized void start()
     {
         super.start();
+    }
+
+    public Evidencija getEvidencija()
+    {
+        return evidencija;
+    }
+
+    public void setEvidencija(Evidencija evidencija)
+    {
+        this.evidencija = evidencija;
     }
 }
